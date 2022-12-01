@@ -1,0 +1,122 @@
+import React from 'react'
+import {useRef, useState, useEffect} from 'react'
+
+export default function VideoPlayer({socket, room, username}){
+    const [videoFilePath, setVideoFilePath] = useState()
+    const inputVideo = useRef()
+    const videoPlaying = useRef();
+
+
+
+    const handleClick = () => {
+        // 👇️ open file input box on click of other element
+        inputVideo.current.click();
+    };
+    const abs = (a)=>{
+        if (a > 0) return a;
+        else return -a;
+    }
+    // var skip = false;
+    const [skip, setSkip] = useState(false)
+
+
+    useEffect(() => {
+        socket.on("receive_message", (data) => {
+            if (skip) return;
+            console.log("skip: ", skip, "rec:", data)
+            let c = videoPlaying.current.currentTime;
+            if (data.control === "pause") videoPlaying.current.pause();
+            else if (data.control === "play") {
+                videoPlaying.current.play()
+                // .then((e)=>console.log("succ", e), (e)=>console.log("failed",e));
+            }
+            if (abs(c - data.currentTime) < 2) return;
+            videoPlaying.current.currentTime = data.currentTime; 
+            console.log(videoPlaying, "xxx", data)
+        });
+        // eslint-disable-next-line
+      }, [socket, skip]);
+
+    
+
+    const handleVideoUpload = event => {
+        const fileObj = event.target.files && event.target.files[0];
+        if (!fileObj) {
+            return;
+        }
+
+        setVideoFilePath(()=>URL.createObjectURL(fileObj))
+    };
+    const sendMessage = async (e) => {
+         await socket.emit("send_message", e);
+    };
+    const wrapperSendMessage = (paused) => {
+        let playing = "pause"
+        if (!videoPlaying.current.paused) playing = "play"
+        // if (!paused) playing = "play"
+        const videoState = {room:room, username: username, control: playing, currentTime: videoPlaying.current.currentTime};
+        console.log("sendMess", videoState)
+        sendMessage(videoState)
+        // sendMessage({username: username, control: playing, currentTime: videoPlaying.current.currentTime})
+    }
+    // const handleVideoClick = (event) => {
+        // console.log("clicked")
+        // if (!videoPlaying.current.paused) {
+        //     videoPlaying.current.pause();
+        // } else {
+        //     try{
+        //         await videoPlaying.current.play()
+        //         console.log("1---", videoPlaying.current.paused)
+        //     } catch(e) {
+        //         console.log("err", e)
+        //     }
+        // }
+        // console.log("play: clicked", videoPlaying.current.paused)
+        // console.log(videoPlaying.current.paused ? 'play' : 'pause');
+        // videoPlaying.current[videoPlaying.current.paused ? 'Play' : 'Pause']();
+        // skip = true
+        // setTimeout(() => {
+        //     skip = false
+        //     console.log("sleeped done click")
+        // }, 2000)
+        // wrapperSendMessage()
+    // };
+    const stopRec = e => {
+        console.log("click stop Rec", new Date().getTime() )
+        // skip = true
+        setSkip(true)
+        setTimeout((e)=>{
+            setSkip(false)
+            console.log("sleeped done ", new Date().getTime() )
+        }, 10000)
+    }
+    // const handleSeeked = e => {
+    //     console.log("seeked", {ispaused: videoPlaying.current.paused})
+    //     skip = true
+    //     setTimeout(()=>{
+    //         skip=false
+    //         console.log("sleeped done seek")
+    //     }, 2000)
+    //     // wrapperSendMessage()
+    // }
+   
+    const handleVideoUpdate = e=>{
+        console.log("update frame, skip: ", skip)
+        if (videoPlaying.current.seeking) return
+        console.log("update frame, skip: ", skip)
+        wrapperSendMessage()
+    }
+    return (
+        <div>
+            <input ref={inputVideo} style={{ display: 'none' }} type="file" onChange={handleVideoUpload} />
+            <button onClick={handleClick}>Open file</button>
+            <hr />
+            <video id="enxing" ref={videoPlaying} controls autoPlay src={videoFilePath}
+                onSeeked={stopRec}
+                onClick={stopRec}
+                // onPlaying={handleVideoPlaying}
+                onTimeUpdate={handleVideoUpdate}
+                width="100%" height="100%" type="video/mp4" />
+        </div>
+    )
+}

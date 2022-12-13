@@ -38,3 +38,7 @@
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
     ```
+
+
+## Browser support audio format:
+* acc is supported audio type and ac3 is not

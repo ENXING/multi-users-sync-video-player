@@ -26,10 +26,19 @@ export default class VideoPlayer extends Component {
     sendMessage = async (e) => {
         await socket.emit("send_message", e);
     };
+
+    getUSATime = () => {
+        let USATime= new Date().toLocaleString("en-US", {timeZone: "America/New_York"})
+        return new Date(USATime).getTime()
+    } 
     wrapperSendMessage = () => {
         let playing = "pause"
         if (!this.videoPlaying.current.paused) playing = "play"
-        const videoState = { room: this.state.room, username: this.state.username, control: playing, currentTime: this.videoPlaying.current.currentTime };
+        const videoState = { room: this.state.room, 
+                            username: this.state.username, 
+                            control: playing, 
+                            globalTimeInt: this.getUSATime(),
+                            currentTime: this.videoPlaying.current.currentTime };
         // console.log("sendMess", videoState,  new Date().getTime() )
         this.sendMessage(videoState)
     }
@@ -37,6 +46,8 @@ export default class VideoPlayer extends Component {
         socket.on("receive_message", (data) => {
             const { hasUserAction, isSeeking } = this.state;
             // console.log("hasUserAction: ", hasUserAction, "rec:", data, new Date().getTime())
+            // console.log("diff-time: ", this.getUSATime() - data.globalTimeInt)
+            if (this.getUSATime() - data.globalTimeInt >= 2 * 1000) return;
             if (hasUserAction || isSeeking) return;
             let c = this.videoPlaying.current.currentTime;
             if (data.control === "pause") this.videoPlaying.current.pause();
